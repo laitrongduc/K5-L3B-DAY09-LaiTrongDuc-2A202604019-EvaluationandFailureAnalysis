@@ -1,0 +1,3 @@
+[submodule "day8-goc"]
+	path = day8-goc
+	url = https://github.com/VinUni-AI20k/K5-Day8-From-Workflows-to-Agents
