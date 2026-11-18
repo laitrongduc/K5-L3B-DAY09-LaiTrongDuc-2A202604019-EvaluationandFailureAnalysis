@@ -91,7 +91,16 @@ def run_eval(shape: str, spec: dict[str, Any], seeds: list[int] | None = None) -
                       evaluators=[GRADERS[m]() for m in metric_ids])
     with tempfile.TemporaryDirectory(prefix="lab9-eval-", ignore_cleanup_errors=True) as tmp:
         # max_concurrency=1: shapes write traces/ and SQLite; keep runs deterministic.
-        report = dataset.evaluate_sync(make_task(shape, world, claims, labels, Path(tmp)),
+        sync_task = make_task(shape, world, claims, labels, Path(tmp))
+
+        async def eval_task(inputs: dict[str, Any]) -> dict[str, Any]:
+            # The local MockLLM/SQLite task is synchronous and bounded. Running it
+            # inside the async task avoids a worker-thread wakeup stall in the
+            # installed pydantic-evals/AnyIO stack while max_concurrency=1 keeps
+            # trace and SQLite writes deterministic.
+            return sync_task(inputs)
+
+        report = dataset.evaluate_sync(eval_task,
                                        max_concurrency=1, progress=False)
     rows = []
     for c in report.cases:
